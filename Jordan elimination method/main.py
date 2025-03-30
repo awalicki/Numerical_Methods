@@ -49,9 +49,6 @@ with open("matrix.txt", "r") as file:
                 constantColumn.append(float(row[j]))
 
 
-print(constantColumn)
-print(matrix)
-
 
 solution = gaussJordanElimination(matrix, constantColumn)
 
