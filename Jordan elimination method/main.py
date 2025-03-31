@@ -4,26 +4,38 @@ def gaussJordanElimination(matrix, constants):
     for i in range(n):
         matrix[i].append(constants[i])
 
-    for i in range(n):
-        if matrix[i][i] == 0:
-            for k in range(i + 1, n):
-                if matrix[k][i] != 0:
-                    matrix[i], matrix[k] = matrix[k], matrix[i]
-                    k = n
+    rank = 0
+    for col in range(n):
+        pivot_row = None
+        for row in range(rank, n):
+            if abs(matrix[row][col]) > 1e-10:
+                pivot_row = row
+                break
 
-        pivot = matrix[i][i]
-        if pivot == 0:
-            raise ValueError("Matrix is singular and cannot be solved.")
+        if pivot_row is None:
+            continue
 
-        for j in range(n + 1):
-            matrix[i][j] /= pivot
+        if pivot_row != rank:
+            matrix[rank], matrix[pivot_row] = matrix[pivot_row], matrix[rank]
 
-        for k in range(n):
-            if k != i:
-                factor = matrix[k][i]
-                for j in range(n + 1):
-                    matrix[k][j] -= factor * matrix[i][j]
+        pivot = matrix[rank][col]
+        for j in range(col, n + 1):
+            matrix[rank][j] /= pivot
 
+        for row in range(n):
+            if row != rank and abs(matrix[row][col]) > 1e-10:
+                factor = matrix[row][col]
+                for j in range(col, n + 1):
+                    matrix[row][j] -= factor * matrix[rank][j]
+
+        rank += 1
+
+    for row in range(rank, n):
+        if abs(matrix[row][-1]) > 1e-10:
+            return None
+
+    if rank < n:
+        return "Nieoznaczony"
 
     solution = []
     for i in range(n):
@@ -32,7 +44,7 @@ def gaussJordanElimination(matrix, constants):
     return solution
 
 
-with open("matrix.txt", "r") as file:
+with open("matrix3.txt", "r") as file:
     lines = file.readlines()
     matrix = []
     constantColumn = []
@@ -48,8 +60,11 @@ with open("matrix.txt", "r") as file:
             for j in range(len(row)):
                 constantColumn.append(float(row[j]))
 
-
-
 solution = gaussJordanElimination(matrix, constantColumn)
 
-print("Solution:", solution)
+if solution is None:
+    print("Układ jest sprzeczny - brak rozwiązań.")
+elif solution == "Nieoznaczony":
+    print("Układ jest nieoznaczony - nieskończenie wiele rozwiązań.")
+else:
+    print("Rozwiązanie:", solution)
