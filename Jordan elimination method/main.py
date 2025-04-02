@@ -46,7 +46,7 @@ def gaussJordanElimination(matrix, constants):
     return solution
 
 
-with open("matrix3.txt", "r") as file:
+with open("j.txt", "r") as file:
     lines = file.readlines()
     matrix = []
     constantColumn = []
