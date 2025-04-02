@@ -7,28 +7,30 @@ def gaussJordanElimination(matrix, constants):
     rank = 0
     for col in range(n):
         pivot_row = None
+        flag = False
+
         for row in range(rank, n):
-            if abs(matrix[row][col]) > 1e-10:
+            if not flag and abs(matrix[row][col]) > 1e-10:
                 pivot_row = row
-                break
+                flag = True
 
-        if pivot_row is None:
-            continue
 
-        if pivot_row != rank:
-            matrix[rank], matrix[pivot_row] = matrix[pivot_row], matrix[rank]
+        if pivot_row is not None:
 
-        pivot = matrix[rank][col]
-        for j in range(col, n + 1):
-            matrix[rank][j] /= pivot
+            if pivot_row != rank:
+                matrix[rank], matrix[pivot_row] = matrix[pivot_row], matrix[rank]
 
-        for row in range(n):
-            if row != rank and abs(matrix[row][col]) > 1e-10:
-                factor = matrix[row][col]
-                for j in range(col, n + 1):
-                    matrix[row][j] -= factor * matrix[rank][j]
+            pivot = matrix[rank][col]
+            for j in range(col, n + 1):
+                matrix[rank][j] /= pivot
 
-        rank += 1
+            for row in range(n):
+                if row != rank and abs(matrix[row][col]) > 1e-10:
+                    factor = matrix[row][col]
+                    for j in range(col, n + 1):
+                        matrix[row][j] -= factor * matrix[rank][j]
+
+            rank += 1
 
     for row in range(rank, n):
         if abs(matrix[row][-1]) > 1e-10:
