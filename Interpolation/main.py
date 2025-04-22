@@ -35,33 +35,38 @@ def dzielone_roznice(x, y):
     n = len(x)
     wspolczynniki = np.copy(y)
     for j in range(1, n):
-        for i in range(n - j):
-            wspolczynniki[i] = (wspolczynniki[i + 1] - wspolczynniki[i]) / (x[i + j] - x[i])
+        for i in range(n - 1, j - 1, -1):
+            wspolczynniki[i] = (wspolczynniki[i] - wspolczynniki[i - 1]) / (x[i] - x[i - j])
     return wspolczynniki
 
-def interpolacja_newtona(x, wezly_x, wezly_y):
-    wspolczynniki = dzielone_roznice(wezly_x, wezly_y)
-    n = len(wspolczynniki)
-    wynik = wspolczynniki[0]
-    iloczyn = 1
-    for i in range(1, n):
-        iloczyn *= (x - wezly_x[i - 1])
-        wynik += wspolczynniki[i] * iloczyn
+def interpolacja_newtona(x, wezly_x, wspolczynniki):
+    n = len(wezly_x)
+    wynik = wspolczynniki[-1]
+    for i in range(n - 2, -1, -1):
+        wynik = wynik * (x - wezly_x[i]) + wspolczynniki[i]
     return wynik
 
 def rysuj_interpolacje(funkcja, wezly_x, wezly_y, a, b, n):
     x_wartosci = np.linspace(a, b, 1000)
     y_wartosci = funkcja(x_wartosci)
 
+    wspolczynniki = dzielone_roznice(wezly_x, wezly_y)
+    wartosci_interp = np.array([interpolacja_newtona(x, wezly_x, wspolczynniki) for x in x_wartosci])
+
+    plt.figure(figsize=(10, 6))
     plt.plot(x_wartosci, y_wartosci, label="Funkcja oryginalna", color="blue")
-    wartosci_interp = np.array([interpolacja_newtona(x, wezly_x, wezly_y) for x in x_wartosci])
     plt.plot(x_wartosci, wartosci_interp, label="Wielomian interpolacyjny", color="red")
     plt.scatter(wezly_x, wezly_y, color="green", zorder=5, label="Węzły interpolacyjne")
+
+    for x, y in zip(wezly_x, wezly_y):
+        plt.plot([x, x], [0, y], 'k--', linewidth=0.5, alpha=0.5)
+        plt.plot(x, y, 'go', markersize=8)
 
     plt.legend()
     plt.xlabel('x')
     plt.ylabel('y')
     plt.title(f'Interpolacja Newtona ({n} węzłów)')
+    plt.grid(True)
     plt.show()
 
 # Interpolacja i rysowanie
@@ -74,6 +79,9 @@ def uruchom_interpolacje():
 
         if n <= 0:
             messagebox.showerror("Błąd", "Liczba węzłów musi być dodatnia!")
+            return
+        if a >= b:
+            messagebox.showerror("Błąd", "Początek przedziału musi być mniejszy niż koniec!")
             return
 
         funkcja = wybierz_funkcje(typ_funkcji)
@@ -118,5 +126,4 @@ pole_n.insert(0, "5")
 przycisk_uruchom = tk.Button(root, text="Uruchom interpolację", command=uruchom_interpolacje)
 przycisk_uruchom.grid(row=4, columnspan=2)
 
-# To uruchamia GUI
 root.mainloop()
