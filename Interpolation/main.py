@@ -3,38 +3,28 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 from tkinter import messagebox, filedialog
 import pandas as pd
-import uuid
-
-# Definicje funkcji
-def funkcja_liniowa(x):
-    return x
-
-def funkcja_modul(x):
-    return np.abs(x)
-
-def funkcja_wielomian(x):
-    return x**3 - 2*x**2 + 4*x - 4
-
-def funkcja_trygonometryczna(x):
-    return np.sin(x)
-
-def funkcja_zlozona(x):
-    return np.sin(x) + 0.5*x
 
 def wybierz_funkcje(typ_funkcji):
     funkcje = {
-        'f(x) = x': funkcja_liniowa,
-        'f(x) = |x|': funkcja_modul,
-        'f(x) = x^3 - 2x^2 + 4x - 4': funkcja_wielomian,
-        'f(x) = sin(x)': funkcja_trygonometryczna,
-        'f(x) = sin(x) + 0.5x': funkcja_zlozona
+        'f(x) = x': lambda x: x,
+        'f(x) = |x|': lambda x: np.abs(x),
+        'f(x) = x^3 - 2x^2 + 4x - 4': lambda x: x**3 - 2*x**2 + 4*x - 4,
+        'f(x) = sin(x)': lambda x: np.sin(x),
+        'f(x) = sin(x) + 0.5x': lambda x: np.sin(x) + 0.5*x
     }
     return funkcje[typ_funkcji]
 
 def wezly_czebyszewa(n, poczatek, koniec):
     k = np.arange(n)
-    wezly = np.cos((2 * k + 1) * np.pi / (2 * n))
+    wezly = np.cos((2 * k + 1) * np.pi / (2 * n + 1))
     return 0.5 * (koniec - poczatek) * wezly + 0.5 * (poczatek + koniec)
+
+def interpolacja_newtona(x, wezly_x, wspolczynniki):
+    n = len(wezly_x)
+    wynik = wspolczynniki[n - 1]
+    for i in range(n - 2, -1, -1):
+        wynik = wynik * (x - wezly_x[i]) + wspolczynniki[i]
+    return wynik
 
 def roznice_dzielone(x, y):
     n = len(x)
@@ -44,14 +34,7 @@ def roznice_dzielone(x, y):
             wspolczynniki[i] = (wspolczynniki[i] - wspolczynniki[i - 1]) / (x[i] - x[i - j])
     return wspolczynniki
 
-def interpolacja_newtona(x, wezly_x, wspolczynniki):
-    n = len(wezly_x)
-    wynik = wspolczynniki[n - 1]
-    for i in range(n - 2, -1, -1):
-        wynik = wynik * (x - wezly_x[i]) + wspolczynniki[i]
-    return wynik
-
-def rysuj_interpolacje(f, wezly_x, wezly_y, poczatek, koniec, n, tytul_dodatek=""):
+def rysuj_interpolacje(f, wezly_x, wezly_y, poczatek, koniec, n):
     wartosci_x = np.linspace(poczatek, koniec, 1000)
     wartosci_y = f(wartosci_x)
 
@@ -63,15 +46,10 @@ def rysuj_interpolacje(f, wezly_x, wezly_y, poczatek, koniec, n, tytul_dodatek="
     plt.plot(wartosci_x, wartosci_interpolowane, label="Wielomian interpolacyjny", color="red", linestyle="--")
     plt.scatter(wezly_x, wezly_y, color="green", zorder=5, label="Węzły interpolacyjne")
 
-    # Dodaj linie pionowe w węzłach
-    for x, y in zip(wezly_x, wezly_y):
-        plt.plot([x, x], [min(min(wartosci_y), min(wartosci_interpolowane)), y], 'k--', linewidth=0.5, alpha=0.5)
-        plt.plot(x, y, 'go', markersize=8)
-
     plt.legend()
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.title(f'Interpolacja Newtona na Węzłach Czebyszewa (n={n}) {tytul_dodatek}')
+    plt.title(f'Interpolacja Newtona na Węzłach Czebyszewa (n={n})')
     plt.grid(True)
     plt.show()
 
@@ -102,16 +80,8 @@ def wczytaj_i_interpoluj_dane():
         return
 
     dane = pd.read_csv(sciezka_pliku, header=None)
-    if dane.shape[1] < 2:
-        messagebox.showerror("Błąd", "Plik CSV musi zawierać co najmniej dwie kolumny (x, y)!")
-        return
-
     x = dane.iloc[:, 0].values.astype(float)
     y = dane.iloc[:, 1].values.astype(float)
-
-    if len(x) < 2:
-        messagebox.showerror("Błąd", "Wymagane są co najmniej dwa punkty danych!")
-        return
 
     poczatek, koniec = min(x), max(x)
     n = len(x)
@@ -124,9 +94,6 @@ def wczytaj_i_interpoluj_dane():
     plt.plot(wartosci_x, wartosci_interpolowane, label="Wielomian interpolacyjny", color="red", linestyle="--")
     plt.scatter(x, y, color="blue", label="Punkty danych")
 
-    for xi, yi in zip(x, y):
-        plt.plot([xi, xi], [min(y), yi], 'k--', linewidth=0.5, alpha=0.5)
-
     plt.legend()
     plt.xlabel('x')
     plt.ylabel('y')
@@ -138,7 +105,6 @@ def wczytaj_i_interpoluj_dane():
 okno = tk.Tk()
 okno.title("Interpolacja Newtona na Węzłach Czebyszewa")
 
-# Wybór funkcji
 etykieta_funkcja = tk.Label(okno, text="Wybierz funkcję:")
 etykieta_funkcja.grid(row=0, column=0, padx=5, pady=5)
 zmienna_funkcja = tk.StringVar(value="f(x) = sin(x)")
@@ -152,7 +118,6 @@ opcje_funkcji = [
 menu_funkcji = tk.OptionMenu(okno, zmienna_funkcja, *opcje_funkcji)
 menu_funkcji.grid(row=0, column=1, padx=5, pady=5)
 
-# Przedzial
 etykieta_poczatek = tk.Label(okno, text="Początek przedziału (a):")
 etykieta_poczatek.grid(row=1, column=0, padx=5, pady=5)
 pole_poczatek = tk.Entry(okno)
@@ -165,14 +130,12 @@ pole_koniec = tk.Entry(okno)
 pole_koniec.grid(row=2, column=1, padx=5, pady=5)
 pole_koniec.insert(0, "3")
 
-# Wezly
 etykieta_n = tk.Label(okno, text="Liczba węzłów:")
 etykieta_n.grid(row=3, column=0, padx=5, pady=5)
 pole_n = tk.Entry(okno)
 pole_n.grid(row=3, column=1, padx=5, pady=5)
 pole_n.insert(0, "5")
 
-# Przyciski
 przycisk_uruchom = tk.Button(okno, text="Uruchom Interpolację", command=uruchom_interpolacje)
 przycisk_uruchom.grid(row=4, column=0, columnspan=2, pady=10)
 
