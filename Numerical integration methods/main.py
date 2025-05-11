@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.special import roots_legendre
 import tkinter as tk
 from tkinter import messagebox
 
@@ -15,30 +14,50 @@ def wybierz_funkcje(typ_funkcji):
     return funkcje[typ_funkcji]
 
 def simpsons_rule(f, a, b, eps):
-    n = 2  # początkowa liczba podprzedziałów (parzysta)
-    prev_result = float('inf')
+    n = 2
+    last_result = float("inf")
 
     while True:
         h = (b - a) / n
         x = np.linspace(a, b, n + 1)
         fx = f(x)
-        result = h / 3 * (fx[0] + 2 * np.sum(fx[2:n:2]) + 4 * np.sum(fx[1:n:2]) + fx[n])
 
-        if abs(result - prev_result) < eps:
-            return result
+        suma1 = 0
+        for i in range(2, n, 2):
+            suma1 += fx[i]
 
-        prev_result = result
-        n *= 2
+        suma2 = 0
+        for i in range(1, n, 2):
+            suma2 += fx[i]
+
+        wynik = h / 3 * (fx[0] + 2 * suma1 + 4 * suma2 + fx[n])
+
+        if abs(wynik - last_result) < eps:
+            return wynik
+
+        last_result = wynik
+        n = n * 2
+
         if n > 1_000_000:
-            raise Exception("Zbyt mała dokładność, pętla się nie zakończyła.")
+            raise Exception("Za dużo kroków – pętla się nie kończy.")
+
 
 def gauss_legendre(f, a, b, nodes=4):
-    xi, wi = roots_legendre(nodes)
+    if nodes != 4:
+        raise NotImplementedError("Obecnie zaimplementowano tylko wersję 4-punktową")
+
+    # Ręcznie podane węzły xi i wagi wi dla 4-punktowej kwadratury Gaussa-Legendre'a
+    xi = [-0.8611363116, -0.3399810436, 0.3399810436, 0.8611363116]
+    wi = [0.3478548451, 0.6521451549, 0.6521451549, 0.3478548451]
+
     suma = 0
     for i in range(nodes):
+        # Przeskalowanie xi z [-1, 1] na [a, b]
         x = 0.5 * (b - a) * xi[i] + 0.5 * (b + a)
         suma += wi[i] * f(x)
+
     return 0.5 * (b - a) * suma
+
 
 def uruchom_funkcje():
     try:
