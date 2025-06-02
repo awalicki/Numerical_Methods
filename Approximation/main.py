@@ -38,55 +38,53 @@ def simpsons_rule(f, a, b, eps):
         if n > 1_000_000:
             raise Exception("Za dużo kroków – pętla się nie kończy.")
 
-
-def hermite_polynomials(n, x):
-    if n == 0:
-        return [np.ones_like(x)]
-    elif n == 1:
-        return [np.ones_like(x), 2 * x]
-
-    H = [np.ones_like(x), 2 * x]
-    for k in range(2, n + 1):
-        Hk = 2 * x * H[-1] - 2 * (k - 1) * H[-2]
-        H.append(Hk)
-    return H
+#generacja wielomianów n - stopień najwyzszego wielomianu, x - punkty dla których obliczamy wartości wielomianów
+def legendre_polynomials(n, x):
+    P = [np.ones_like(x), x]
+    for k in range(1, n):
+        P_next = ((2 * k + 1) * x * P[-1] - k * P[-2]) / (k + 1)
+        P.append(P_next)
+    return P
 
 
-def wartosc_wielomianu_hermite(x, wspolczynniki):
+def wartosc_wielomianu_legendre(x, wspolczynniki):
     n = len(wspolczynniki) - 1
     if n < 0:
-        return np.zeros_like(x)
-
-    H = hermite_polynomials(n, x)
+        return np.zeros_like(x) #lista zer o długości x
+    P = legendre_polynomials(n, x)
     wynik = np.zeros_like(x)
     for i in range(n + 1):
-        wynik += wspolczynniki[i] * H[i]
-    return wynik
+        wynik += wspolczynniki[i] * P[i]
+    return wynik #wartości wielomianu aproksymującego dla wszystkich punktów w x
 
 
-def aproksymacja_hermite(f, stopien, eps):
-    def funkcja_waga(t):
-        return np.exp(-t ** 2)
+def transformuj_do_minus1_1(x, a, b):
+    return 2 * (x - a) / (b - a) - 1
 
-    def calka_hermite(fun, eps):
-        # Całkujemy od -inf do +inf z wagą exp(-x^2)
-        # Dla uproszczenia przybliżamy całkę na skończonym przedziale [-bound, bound]
-        bound = 5.0  # Wartość wystarczająco duża, bo exp(-5^2) ≈ 1.4e-12
-        return simpsons_rule(lambda x: fun(x) * funkcja_waga(x), -bound, bound, eps)
+
+def transformuj_z_minus1_1(x, a, b):
+    return 0.5 * ((b - a) * x + (b + a))
+
+#oblicza kolejne współczynniki ck
+def aproksymacja_legendre(f, stopien, eps, a, b):
+    def calka_legendre(fun, eps):
+        return simpsons_rule(fun, -1, 1, eps)
 
     wsp = []
     for k in range(stopien + 1):
-        def Hk(t):
-            return hermite_polynomials(k, np.array([t]))[k][0]
+        #wartość wielomianu dla pojedynczego punktu t
+        def Pk(t):
+            return legendre_polynomials(k, np.array([t]))[k][0]
 
         def licznik(t):
-            return f(t) * Hk(t)
+            x = transformuj_z_minus1_1(t, a, b)
+            return f(x) * Pk(t)
 
         def mianownik(t):
-            return Hk(t) ** 2
+            return Pk(t) ** 2
 
-        licz = calka_hermite(licznik, eps)
-        mian = calka_hermite(mianownik, eps)
+        licz = calka_legendre(licznik, eps)
+        mian = calka_legendre(mianownik, eps)
 
         wsp.append(licz / mian)
     return wsp
@@ -101,29 +99,26 @@ def uruchom_funkcje():
         stopien = int(pole_stopien.get())
 
         f = wybierz_funkcje(typ_funkcji)
-
-        # Aproksymacja Hermite'a działa na całej osi rzeczywistej z wagą exp(-x^2)
-        # Dla celów wizualizacji ograniczamy wykres do podanego przedziału [a, b]
-        wsp = aproksymacja_hermite(f, stopien, eps)
+        wsp = aproksymacja_legendre(f, stopien, eps, a, b)
 
         x_vals = np.linspace(a, b, 500)
+        x_mapped = transformuj_do_minus1_1(x_vals, a, b)
         y_real = f(x_vals)
-        y_aprox = wartosc_wielomianu_hermite(x_vals, wsp)
+        y_aprox = wartosc_wielomianu_legendre(x_mapped, wsp)
 
         plt.figure()
         plt.plot(x_vals, y_real, label="Funkcja")
-        plt.plot(x_vals, y_aprox, label="Aproksymacja Hermite'a")
+        plt.plot(x_vals, y_aprox, label="Aproksymacja Legendre'a")
         plt.legend()
-        plt.title("Aproksymacja Hermite'a")
+        plt.title("Aproksymacja Legendre'a")
         plt.grid(True)
         plt.show()
 
-        def blad_kwadratowy(x):
-            return (f(x) - wartosc_wielomianu_hermite(x, wsp)) ** 2 * np.exp(-x ** 2)
+        def blad_kwadratowy(t):
+            x = transformuj_z_minus1_1(t, a, b)
+            return (f(x) - wartosc_wielomianu_legendre(t, wsp)) ** 2
 
-        # Obliczamy błąd na całej osi rzeczywistej (z wagą)
-        bound = 5.0
-        blad = np.sqrt(simpsons_rule(blad_kwadratowy, -bound, bound, eps))
+        blad = np.sqrt(simpsons_rule(blad_kwadratowy, -1, 1, eps))
         print(f"Błąd aproksymacji: {blad:.6f}")
 
     except Exception as e:
@@ -132,7 +127,7 @@ def uruchom_funkcje():
 
 # GUI
 okno = tk.Tk()
-okno.title("Aproksymacja wielomianowa (Hermite)")
+okno.title("Aproksymacja")
 
 etykieta_funkcja = tk.Label(okno, text="Funkcja:")
 etykieta_funkcja.grid(row=0, column=0)
